@@ -54,7 +54,7 @@ Respond in a natural, conversational tone.`;
 
 // Function to call Gemini API for chat
 export async function generateChatResponse(messages: Message[], newMessage: string): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = "AIzaSyD7eD7YQFVUL5OYOmLt6UHjwgDBYhy0RvE";
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY not configured");
   }
@@ -123,7 +123,7 @@ export async function generateChatResponse(messages: Message[], newMessage: stri
 
 // Function to analyze mood patterns
 export async function analyzeMoodPatterns(moods: Mood[]): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = "AIzaSyD7eD7YQFVUL5OYOmLt6UHjwgDBYhy0RvE";
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY not configured");
   }
