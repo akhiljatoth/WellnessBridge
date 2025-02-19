@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Home, MessageSquare, LogOut } from "lucide-react";
+import { Home, MessageSquare, LogOut, AlertTriangle } from "lucide-react";
 
 export default function Navbar() {
   const { user, logoutMutation } = useAuth();
@@ -25,8 +25,14 @@ export default function Navbar() {
                 Chat
               </Button>
             </Link>
+            <Link href="/social-monitoring">
+              <Button variant="ghost" className="gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Social Monitoring
+              </Button>
+            </Link>
           </div>
-          
+
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">
               {user.username}

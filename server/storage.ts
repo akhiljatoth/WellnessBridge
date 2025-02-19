@@ -1,5 +1,5 @@
 import { IStorage } from "./types";
-import { User, InsertUser, Message, InsertMessage, Mood, InsertMood } from "@shared/schema";
+import { User, InsertUser, Message, InsertMessage, Mood, InsertMood, SocialMediaPost, InsertSocialMediaPost } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 
@@ -9,6 +9,7 @@ export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private messages: Map<number, Message>;
   private moods: Map<number, Mood>;
+  private socialMediaPosts: Map<number, SocialMediaPost>;
   sessionStore: session.Store;
   currentId: number;
 
@@ -16,6 +17,7 @@ export class MemStorage implements IStorage {
     this.users = new Map();
     this.messages = new Map();
     this.moods = new Map();
+    this.socialMediaPosts = new Map();
     this.currentId = 1;
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
@@ -51,9 +53,9 @@ export class MemStorage implements IStorage {
   }
 
   async getMessagesByUserId(userId: number): Promise<Message[]> {
-    return Array.from(this.messages.values()).filter(
-      (message) => message.userId === userId,
-    ).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+    return Array.from(this.messages.values())
+      .filter((message) => message.userId === userId)
+      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
   }
 
   async createMood(insertMood: InsertMood): Promise<Mood> {
@@ -68,9 +70,33 @@ export class MemStorage implements IStorage {
   }
 
   async getMoodsByUserId(userId: number): Promise<Mood[]> {
-    return Array.from(this.moods.values()).filter(
-      (mood) => mood.userId === userId,
-    ).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+    return Array.from(this.moods.values())
+      .filter((mood) => mood.userId === userId)
+      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  }
+
+  // New methods for social media monitoring
+  async createSocialMediaPost(insertPost: InsertSocialMediaPost): Promise<SocialMediaPost> {
+    const id = this.currentId++;
+    const post: SocialMediaPost = {
+      ...insertPost,
+      id,
+      timestamp: new Date(),
+    };
+    this.socialMediaPosts.set(id, post);
+    return post;
+  }
+
+  async getSocialMediaPostsByUserId(userId: number): Promise<SocialMediaPost[]> {
+    return Array.from(this.socialMediaPosts.values())
+      .filter((post) => post.userId === userId)
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  }
+
+  async getUrgentSocialMediaPosts(userId: number): Promise<SocialMediaPost[]> {
+    return Array.from(this.socialMediaPosts.values())
+      .filter((post) => post.userId === userId && post.isUrgent === 1)
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   }
 }
 

@@ -8,6 +8,7 @@ import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/dashboard";
 import Chat from "@/pages/chat";
+import SocialMonitoring from "@/pages/social-monitoring";
 import Navbar from "@/components/navbar";
 
 function Router() {
@@ -18,6 +19,7 @@ function Router() {
         <Route path="/auth" component={AuthPage} />
         <ProtectedRoute path="/" component={Dashboard} />
         <ProtectedRoute path="/chat" component={Chat} />
+        <ProtectedRoute path="/social-monitoring" component={SocialMonitoring} />
         <Route component={NotFound} />
       </Switch>
     </div>
