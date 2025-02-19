@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Brain, Loader2 } from "lucide-react";
+import { Brain, Loader2, AlertTriangle } from "lucide-react";
 import { useState } from "react";
 
 type AnalysisResponse = {
@@ -36,12 +36,16 @@ export default function AIInsights() {
   if (error) {
     return (
       <Alert variant="destructive">
-        <AlertTitle>Error</AlertTitle>
-        <AlertDescription>
-          Failed to load AI analysis. Please try again later.
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>Analysis Error</AlertTitle>
+        <AlertDescription className="mt-2">
+          <p>Unable to generate mood analysis. Please try again later.</p>
           {process.env.NODE_ENV === 'development' && (
             <div className="mt-2 text-xs opacity-70">
-              Error: {(error as Error).message}
+              <p>Error Details:</p>
+              <pre className="mt-1 p-2 bg-black/10 rounded">
+                {(error as Error).message}
+              </pre>
             </div>
           )}
         </AlertDescription>
@@ -63,9 +67,13 @@ export default function AIInsights() {
       </CardHeader>
       <CardContent>
         <div 
-          className="prose prose-sm max-w-none"
+          className="prose prose-sm max-w-none dark:prose-invert"
           dangerouslySetInnerHTML={{ 
-            __html: data.analysis.replace(/\n/g, '<br>')
+            __html: data.analysis
+              .replace(/\n/g, '<br>')
+              .replace(/^# (.*)/gm, '<h1 class="text-xl font-bold mt-4 mb-2">$1</h1>')
+              .replace(/^## (.*)/gm, '<h2 class="text-lg font-semibold mt-3 mb-2">$1</h2>')
+              .replace(/^### (.*)/gm, '<h3 class="text-base font-medium mt-2 mb-1">$1</h3>')
           }} 
         />
       </CardContent>

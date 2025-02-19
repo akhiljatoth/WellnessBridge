@@ -29,18 +29,18 @@ Format your response in clear sections using markdown headings.`;
 
 // Function to call Gemini API
 export async function analyzeMoodPatterns(moods: Mood[]): Promise<string> {
-  if (!process.env.GEMINI_API_KEY) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
     throw new Error("GEMINI_API_KEY not configured");
   }
 
   const prompt = createAnalysisPrompt(moods);
 
   try {
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.GEMINI_API_KEY}`
       },
       body: JSON.stringify({
         contents: [{
@@ -77,18 +77,21 @@ export async function analyzeMoodPatterns(moods: Mood[]): Promise<string> {
 
     if (!response.ok) {
       const errorText = await response.text();
+      console.error('Gemini API Error Response:', errorText);
       throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
+    console.log('Gemini API Response:', JSON.stringify(data, null, 2));
 
     if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+      console.error('Invalid Gemini API Response Format:', data);
       throw new Error('Invalid response format from Gemini API');
     }
 
     return data.candidates[0].content.parts[0].text;
   } catch (error) {
     console.error('Error calling Gemini API:', error);
-    throw error;
+    throw new Error(`Failed to analyze mood patterns: ${error.message}`);
   }
 }
