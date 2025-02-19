@@ -2,12 +2,19 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Brain, Loader2 } from "lucide-react";
+import { useState } from "react";
+
+type AnalysisResponse = {
+  analysis: string;
+};
 
 export default function AIInsights() {
-  const { data: analysisData, isLoading, error } = useQuery({
+  const { data, isLoading, error } = useQuery<AnalysisResponse>({
     queryKey: ["/api/moods/analysis"],
-    // Only fetch analysis if there's mood data
-    enabled: true,
+    // Retry failed requests 3 times
+    retry: 3,
+    // Only refetch on window focus if the data is older than 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 
   if (isLoading) {
@@ -32,12 +39,17 @@ export default function AIInsights() {
         <AlertTitle>Error</AlertTitle>
         <AlertDescription>
           Failed to load AI analysis. Please try again later.
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mt-2 text-xs opacity-70">
+              Error: {(error as Error).message}
+            </div>
+          )}
         </AlertDescription>
       </Alert>
     );
   }
 
-  if (!analysisData) {
+  if (!data?.analysis) {
     return null;
   }
 
@@ -49,8 +61,13 @@ export default function AIInsights() {
           AI Mental Health Insights
         </CardTitle>
       </CardHeader>
-      <CardContent className="prose prose-sm max-w-none">
-        <div className="whitespace-pre-wrap">{analysisData.analysis}</div>
+      <CardContent>
+        <div 
+          className="prose prose-sm max-w-none"
+          dangerouslySetInnerHTML={{ 
+            __html: data.analysis.replace(/\n/g, '<br>')
+          }} 
+        />
       </CardContent>
     </Card>
   );
