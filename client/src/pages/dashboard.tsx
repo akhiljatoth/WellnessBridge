@@ -11,6 +11,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { type Mood } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { Brain, TrendingUp } from "lucide-react";
+import AIInsights from "@/components/ai-insights";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -103,6 +104,8 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <AIInsights />
     </div>
   );
 }

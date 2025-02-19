@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { insertMessageSchema, insertMoodSchema, insertSocialMediaPostSchema } from "@shared/schema";
+import { analyzeMoodPatterns } from "./ai-analysis";
 
 // Mock sentiment analysis function (to be replaced with actual AI model)
 function analyzeSentiment(text: string): { score: number; distressLevel: number; isUrgent: number } {
@@ -101,6 +102,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const posts = await storage.getUrgentSocialMediaPosts(req.user.id);
     res.json(posts);
+  });
+
+  app.get("/api/moods/analysis", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      const moods = await storage.getMoodsByUserId(req.user.id);
+      if (moods.length === 0) {
+        return res.status(400).json({ message: "No mood data available for analysis" });
+      }
+
+      const analysis = await analyzeMoodPatterns(moods);
+      res.json({ analysis });
+    } catch (error) {
+      console.error('Error generating mood analysis:', error);
+      res.status(500).json({ message: "Failed to generate mood analysis" });
+    }
   });
 
   const httpServer = createServer(app);
