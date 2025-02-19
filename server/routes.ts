@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { insertMessageSchema, insertMoodSchema, insertSocialMediaPostSchema } from "@shared/schema";
-import { analyzeMoodPatterns } from "./ai-analysis";
+import { analyzeMoodPatterns, generateChatResponse } from "./ai-analysis";
 
 // Mock sentiment analysis function (to be replaced with actual AI model)
 function analyzeSentiment(text: string): { score: number; distressLevel: number; isUrgent: number } {
@@ -25,7 +25,6 @@ function analyzeSentiment(text: string): { score: number; distressLevel: number;
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
 
-  // Existing routes
   app.post("/api/messages", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
@@ -37,11 +36,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const message = await storage.createMessage(data);
 
     if (!data.isBot) {
-      const botResponse = await storage.createMessage({
-        userId: req.user.id,
-        content: getMockBotResponse(data.content),
-        isBot: 1,
-      });
+      try {
+        // Get conversation history for context
+        const messages = await storage.getMessagesByUserId(req.user.id);
+        const aiResponse = await generateChatResponse(messages, data.content);
+
+        const botMessage = await storage.createMessage({
+          userId: req.user.id,
+          content: aiResponse,
+          isBot: 1,
+        });
+      } catch (error) {
+        console.error('Error generating AI response:', error);
+        // If AI fails, send a fallback message
+        await storage.createMessage({
+          userId: req.user.id,
+          content: "I apologize, but I'm having trouble processing your message right now. Please try again later.",
+          isBot: 1,
+        });
+      }
     }
 
     res.json(message);
@@ -71,7 +84,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(moods);
   });
 
-  // New social media monitoring routes
+  // Social media monitoring routes
   app.post("/api/social-media-posts", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
@@ -123,15 +136,4 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const httpServer = createServer(app);
   return httpServer;
-}
-
-function getMockBotResponse(message: string): string {
-  const responses = [
-    "I understand how you're feeling. Would you like to talk more about that?",
-    "That sounds challenging. How can I help support you?",
-    "Thank you for sharing. What coping strategies have worked for you in the past?",
-    "I'm here to listen. Would you like to explore this further?",
-    "Your feelings are valid. How can we work through this together?"
-  ];
-  return responses[Math.floor(Math.random() * responses.length)];
 }
