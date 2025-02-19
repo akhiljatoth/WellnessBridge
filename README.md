@@ -4,6 +4,8 @@
 
 **WellnessBridge** is an AI-driven platform integrating mental health chatbots, employee well-being monitoring, social media distress detection, and personalized therapy AI assistants.
 
+![WellnessBridge Banner](assests/img6.png)
+
 ## 🌟 Features
 
 ### 🧠 AI-Powered Mental Health Chatbot
@@ -62,3 +64,9 @@
 ```bash
 git clone https://github.com/akhiljatoth/WellnessBridge.git
 cd WellnessBridge
+
+```
+![WellnessBridge Banner](assests/img1.png)
+![WellnessBridge Banner](assests/img2.png)
+![WellnessBridge Banner](assests/img4.png)
+![WellnessBridge Banner](assests/img5.png)
