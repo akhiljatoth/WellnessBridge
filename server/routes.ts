@@ -39,13 +39,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         // Get conversation history for context
         const messages = await storage.getMessagesByUserId(req.user.id);
-        const aiResponse = await generateChatResponse(messages, data.content);
+        const { response: aiResponse, analysis } = await generateChatResponse(messages, data.content);
 
+        // Create bot message with AI response
         const botMessage = await storage.createMessage({
           userId: req.user.id,
           content: aiResponse,
           isBot: 1,
         });
+
+        // If message is urgent, create a social media post to track it
+        if (analysis.urgency > 0.7) {
+          await storage.createSocialMediaPost({
+            userId: req.user.id,
+            content: data.content,
+            platform: "chat",
+            sentimentScore: Math.round(analysis.sentiment * 100),
+            distressLevel: Math.round(analysis.urgency * 10),
+            isUrgent: 1,
+            metadata: {
+              topics: analysis.topics,
+              suggestedResources: analysis.suggestedResources
+            }
+          });
+        }
       } catch (error) {
         console.error('Error generating AI response:', error);
         // If AI fails, send a fallback message
