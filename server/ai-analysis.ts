@@ -10,96 +10,31 @@ function formatMoodDataForAnalysis(moods: Mood[]): string {
     .join('\n');
 }
 
-type MessageAnalysis = {
-  sentiment: number; // -1 to 1
-  urgency: number; // 0 to 1
-  topics: string[];
-  suggestedResources: string[];
-};
+// Create a prompt for Gemini API
+function createAnalysisPrompt(moods: Mood[]): string {
+  const moodData = formatMoodDataForAnalysis(moods);
+  return `You are an experienced mental health professional. Please analyze the following mood tracking data and provide professional insights and recommendations:
 
-// Function to analyze message content
-async function analyzeMessageContent(message: string): Promise<MessageAnalysis> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY not configured");
-  }
+Mood History:
+${moodData}
 
-  const prompt = `Analyze the following message from a mental health perspective. Provide a JSON response with the following structure:
-  {
-    "sentiment": (number between -1 and 1),
-    "urgency": (number between 0 and 1),
-    "topics": [array of relevant mental health topics],
-    "suggestedResources": [array of relevant resource suggestions]
-  }
+Please provide:
+1. Pattern Analysis: Identify any patterns or trends in the mood data
+2. Professional Insights: What might these patterns indicate about the person's mental well-being?
+3. Recommendations: Suggest 2-3 specific, actionable steps they could take to maintain or improve their mental health
+4. Areas of Concern: Note any concerning patterns that might need attention (if any)
 
-  Message: "${message}"`;
-
-  try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.3,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 1024,
-        }
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const analysisText = data.candidates[0].content.parts[0].text;
-
-    // Extract JSON from the response
-    const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('Invalid response format');
-    }
-
-    const analysis = JSON.parse(jsonMatch[0]);
-    return {
-      sentiment: Math.max(-1, Math.min(1, analysis.sentiment)),
-      urgency: Math.max(0, Math.min(1, analysis.urgency)),
-      topics: analysis.topics || [],
-      suggestedResources: analysis.suggestedResources || []
-    };
-  } catch (error) {
-    console.error('Error analyzing message:', error);
-    return {
-      sentiment: 0,
-      urgency: 0,
-      topics: [],
-      suggestedResources: []
-    };
-  }
+Format your response in clear sections using markdown headings.`;
 }
 
 // Function to create chat prompt
-function createChatPrompt(messages: Message[], newMessage: string, analysis: MessageAnalysis): string {
+function createChatPrompt(messages: Message[], newMessage: string): string {
   const context = messages
     .slice(-5) // Get last 5 messages for context
     .map(msg => `${msg.isBot ? 'Assistant' : 'User'}: ${msg.content}`)
     .join('\n');
 
-  const urgencyLevel = analysis.urgency > 0.7 ? 'high' :
-                      analysis.urgency > 0.4 ? 'moderate' : 'low';
-
-  return `You are an empathetic mental health assistant. Based on message analysis:
-- Sentiment: ${analysis.sentiment > 0 ? 'Positive' : analysis.sentiment < 0 ? 'Negative' : 'Neutral'}
-- Urgency Level: ${urgencyLevel}
-- Topics: ${analysis.topics.join(', ')}
+  return `You are an empathetic mental health assistant. Your role is to provide supportive, understanding responses while maintaining appropriate boundaries. You cannot provide medical advice or diagnosis, but you can offer general wellness suggestions and emotional support.
 
 Previous conversation:
 ${context}
@@ -107,25 +42,24 @@ ${context}
 User's message:
 ${newMessage}
 
-Provide a response that:
-1. Shows empathy and understanding
-2. Addresses identified topics
-3. Offers relevant coping strategies
-${urgencyLevel === 'high' ? '4. Strongly encourages seeking professional help and provides crisis resources' : ''}
-${analysis.suggestedResources.length > 0 ? `5. Consider mentioning these resources: ${analysis.suggestedResources.join(', ')}` : ''}
+Please provide a response that is:
+1. Empathetic and understanding
+2. Professional but warm
+3. Focused on emotional support and well-being
+4. Includes specific suggestions for coping or self-care when appropriate
+5. Clear about your limitations (not a replacement for professional help)
 
-Maintain a professional but warm tone.`;
+Respond in a natural, conversational tone.`;
 }
 
 // Function to call Gemini API for chat
-export async function generateChatResponse(messages: Message[], newMessage: string): Promise<{ response: string; analysis: MessageAnalysis }> {
+export async function generateChatResponse(messages: Message[], newMessage: string): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY not configured");
   }
 
-  const analysis = await analyzeMessageContent(newMessage);
-  const prompt = createChatPrompt(messages, newMessage, analysis);
+  const prompt = createChatPrompt(messages, newMessage);
 
   try {
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
@@ -180,10 +114,7 @@ export async function generateChatResponse(messages: Message[], newMessage: stri
       throw new Error('Invalid response format from Gemini API');
     }
 
-    return {
-      response: data.candidates[0].content.parts[0].text,
-      analysis
-    };
+    return data.candidates[0].content.parts[0].text;
   } catch (error) {
     console.error('Error calling Gemini API:', error);
     throw new Error(`Failed to generate chat response: ${(error as Error).message}`);
